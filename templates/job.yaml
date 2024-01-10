@@ -1,0 +1,162 @@
+{{- if .Values.jobs }}
+{{- $root := . }}
+{{- range $jobName, $job := .Values.jobs }}
+{{- if not $job.disabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $jobName }}
+  labels:
+{{- if $job.customLabels }}
+{{ toYaml $job.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+    app: {{ $jobName }}
+{{- end }}
+{{- if $job.extraLabels }}
+{{ toYaml $job.extraLabels | indent 4 }}
+{{- end }}
+{{- if $job.annotations }}
+  annotations:
+{{ toYaml $job.annotations | indent 4 }}
+{{- end }}
+spec:
+{{- if $job.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ $job.ttlSecondsAfterFinished }}
+{{- end}}
+  backoffLimit: {{ $job.backoffLimit | default 5 }}
+  template:
+    metadata:
+{{- if $job.podAnnotations }}
+      annotations:
+{{ toYaml $job.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+{{- if $job.customLabels }}
+{{ toYaml $job.customLabels | indent 8}}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 8 }}
+        app: {{ $jobName }}
+{{- end }}
+{{- if $job.extraLabels }}
+{{ toYaml $job.extraLabels | indent 8 }}
+{{- end }}
+    spec:
+{{- if $job.serviceAccountName }}
+      serviceAccountName: {{ $job.serviceAccountName }}
+{{- end}}
+      restartPolicy: {{ $job.restartPolicy | default "Never" }}
+{{- if $job.initContainers }}
+      initContainers:
+{{- end }}
+{{- range $initName, $init := $job.initContainers }}
+      - name: "{{ if $init.name }}{{ $init.name }}{{ else }}{{ $initName }}{{ end }}"
+        image: "{{ tpl $init.image $ }}"
+        imagePullPolicy: "{{ if $init.imagePullPolicy }}{{ $init.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $init.command }}
+        command:
+{{ tpl (toYaml $init.command) $ | indent 8 }}
+{{- end }}
+{{- if $init.args }}
+        args:
+{{ tpl (toYaml $init.args) $ | indent 8 }}
+{{- end }}
+{{- if $init.volumeMounts }}
+        volumeMounts:
+{{ toYaml $init.volumeMounts | indent 8 }}
+{{- end }}
+        env:
+{{- if $init.extraVars }}
+{{- range $key, $val := $init.extraVars }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if and $root.Values.localConfigs }}
+{{- range $key, $config := $root.Values.localConfigs.jobs }}
+{{- if eq $key $jobName }}
+{{- range $key, $initConfig := $config.initContainers }}
+{{- if eq $key $initName }}
+{{- range $key, $value := $initConfig }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $value $ | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if $init.resources }}
+        resources:
+{{ toYaml $init.resources | indent 10 }}
+{{- end }}
+{{- end }}
+      containers:
+{{- range $containerName, $container := $job.containers }}
+      - name: "{{ if $container.name }}{{ $container.name }}{{ else }}{{ $containerName }}{{ end }}"
+        image: "{{ tpl $container.image $ }}"
+        imagePullPolicy: "{{ if $container.imagePullPolicy }}{{ $container.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $container.command }}
+        command:
+{{ tpl (toYaml $container.command) $ | indent 8 }}
+{{- end }}
+{{- if $container.args }}
+        args:
+{{ tpl (toYaml $container.args) $ | indent 8 }}
+{{- end }}
+{{- if $container.volumeMounts }}
+        volumeMounts:
+{{ toYaml $container.volumeMounts | indent 8 }}
+{{- end }}
+{{- if $container.securityContext }}
+        securityContext:
+{{ toYaml $container.securityContext | indent 10 }}
+{{- end }}
+        env:
+{{- if $container.extraVars }}
+{{- range $key, $val := $container.extraVars }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if and $root.Values.localConfigs }}
+{{- range $key, $config := $root.Values.localConfigs.jobs }}
+{{- if eq $key $jobName }}
+{{- range $key, $config := $config.containers }}
+{{- if eq $key $containerName }}
+{{- range $key, $value := $config }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $value $ | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if $container.resources }}
+        resources:
+{{ toYaml $container.resources | indent 10 }}
+{{- end }}
+{{- end }}
+{{- if $job.nodeSelector }}
+      nodeSelector:
+{{- range $key, $val := $job.nodeSelector }}
+        {{ $key }}: {{ $val | quote }}
+{{- end }}
+{{- end }}
+{{- if $job.affinity }}
+      affinity:
+{{ toYaml $job.affinity | indent 8 }}
+{{- end }}
+{{- if $job.tolerations }}
+      tolerations:
+{{ toYaml $job.tolerations | indent 8 }}
+{{- end }}
+{{- if $job.volumes }}
+      volumes:
+{{ toYaml $job.volumes | indent 6 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

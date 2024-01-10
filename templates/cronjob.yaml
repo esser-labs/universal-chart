@@ -1,0 +1,189 @@
+{{- if .Values.cronjobs }}
+{{- $root := . }}
+{{- range $cronjobName, $cronjob := .Values.cronjobs }}
+{{- if not $cronjob.disabled }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $cronjobName }}
+  labels:
+{{- if $cronjob.customLabels }}
+{{ toYaml $cronjob.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+    app: {{ $cronjobName }}
+{{- end }}
+{{- if $cronjob.extraLabels }}
+{{ toYaml $cronjob.extraLabels | indent 4 }}
+{{- end }}
+spec:
+  concurrencyPolicy: {{ $cronjob.concurrencyPolicy }}
+  schedule: {{ $cronjob.schedule | quote }}
+{{- if $cronjob.successfulJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ $cronjob.successfulJobsHistoryLimit }}
+{{- end }}
+{{- if $cronjob.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ $cronjob.startingDeadlineSeconds }}
+{{- end }}
+{{- if $cronjob.failedJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ $cronjob.failedJobsHistoryLimit }}
+{{- end }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+{{- if $cronjob.customLabels }}
+{{ toYaml $cronjob.customLabels | indent 12 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 12 }}
+            app: {{ $cronjobName }}
+            cron: {{ $cronjobName }}
+{{- end }}
+{{- if $cronjob.extraLabels }}
+{{ toYaml $cronjob.extraLabels | indent 12 }}
+{{- end }}
+{{- if $cronjob.podAnnotations }}
+          annotations:
+{{ toYaml $cronjob.podAnnotations | indent 12 }}
+{{- end }}
+        spec:
+{{- if $cronjob.sa }}
+          serviceAccountName: {{ $cronjob.sa }}
+{{- end }}
+{{- if $cronjob.initContainers }}
+          initContainers:
+{{- end }}
+{{- range $initName, $init := $cronjob.initContainers }}
+          - name: "{{ if $init.name }}{{ $init.name }}{{ else }}{{ $initName }}{{ end }}"
+            image: "{{ tpl $init.image $ }}"
+            imagePullPolicy: "{{ if $init.imagePullPolicy }}{{ $init.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $init.command }}
+            command:
+{{ tpl (toYaml $init.command) $ | indent 12 }}
+{{- end }}
+{{- if $init.args }}
+            args:
+{{ tpl (toYaml $init.args) $ | indent 12 }}
+{{- end }}
+{{- if $init.volumeMounts }}
+            volumeMounts:
+{{ toYaml $init.volumeMounts | indent 12 }}
+{{- end }}
+            env:
+{{- if and $root.Values.localConfigs }}
+{{- range $key, $config := $root.Values.localConfigs.cronjobs }}
+{{- if eq $key $cronjobName }}
+{{- range $key, $containerConfig := $config.initContainers }}
+{{- if eq $key $initName }}
+{{- range $key, $value := $containerConfig }}
+            - name: {{ $key | quote }}
+              value: {{ tpl $value $ | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if $init.extraVars }}
+{{- range $key, $val := $init.extraVars }}
+            - name: {{ $key | quote }}
+              value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if $init.resources }}
+        resources:
+{{ toYaml $init.resources | indent 14 }}
+{{- end }}
+{{- end }}
+          containers:
+{{- range $containerName, $container := $cronjob.containers }}
+          - name: {{ $containerName }}
+            image: "{{ tpl $container.image $ }}"
+            imagePullPolicy: "{{ if $container.imagePullPolicy }}{{ $container.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $container.command }}
+            command:
+{{ tpl (toYaml $container.command) $ | indent 12 }}
+{{- end }}
+{{- if $container.args }}
+            args:
+{{ tpl (toYaml $container.args) $ | indent 12 }}
+{{- end }}
+{{- if $container.containerPorts }}
+            ports:
+{{ toYaml $container.containerPorts | indent 12 }}
+{{- end }}
+{{- if $container.volumeMounts }}
+            volumeMounts:
+{{ toYaml $container.volumeMounts | indent 12 }}
+{{- end }}
+{{- if $container.securityContext }}
+            securityContext:
+{{ toYaml $container.securityContext | indent 14 }}
+{{- end }}
+            env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_SERVICE_ACCOUNT
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
+
+{{- if and $root.Values.localConfigs }}
+{{- range $key, $config := $root.Values.localConfigs.cronjobs }}
+{{- if eq $key $cronjobName }}
+{{- range $key, $containerConfig := $config.containers }}
+{{- if eq $key $containerName }}
+{{- range $key, $value := $containerConfig }}
+            - name: {{ $key | quote }}
+              value: {{ tpl $value $ | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- if or $container.extraVars $container.secretKeyRef }}
+{{- if $container.extraVars }}
+{{- range $key, $val := $container.extraVars }}
+            - name: {{ $key | quote }}
+              value: {{ tpl $val $ | quote }}
+{{- end}}
+{{- end}}
+{{- if $container.secretKeyRef }}
+{{ toYaml $container.secretKeyRef | indent 12 }}
+{{- end }}
+{{- end }}
+{{- if $container.resources }}
+            resources:
+{{ toYaml $container.resources | indent 14 }}
+{{- end }}
+{{- end }}
+{{- if $cronjob.volumes }}
+          volumes:
+{{ toYaml $cronjob.volumes | indent 10 }}
+{{- end }}
+{{- if $cronjob.affinity }}
+          affinity:
+{{ toYaml $cronjob.affinity | indent 12 }}
+{{- end }}
+          restartPolicy: {{ $cronjob.restartPolicy }}
+{{- end }}
+{{- end }}
+{{- end }}

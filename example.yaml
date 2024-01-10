@@ -1,0 +1,149 @@
+# default tag to use.  To use custom tag, use --set option with helm upgrade
+# https://helm.sh/docs/helm/helm_upgrade/#options
+release:
+  tag: latest
+
+# https://kubernetes.io/docs/reference/access-authn-authz/rbac/#clusterrolebinding-example
+clusterRoleBindings:
+  [clusterRoleBindings name here]:
+    roleName: [clusterRole name here]
+    # https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-subjects
+    subjects:
+      - kind: [User,Group,ServiceAccount]
+        name: [name here]
+        apiGroup: rbac.authorization.k8s.io
+
+# https://kubernetes.io/docs/concepts/configuration/configmap/#configmaps-and-pods
+configmaps:
+  [configmap name here]:
+    # optional. if it's a json format, set it true. default false.
+    toJson: [true,false]
+    data:
+      [config file name here]:
+        [config here]
+      [config file name here]:
+        [config here]
+
+# https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/#example
+cronjobs:
+  [cronjob name here]:
+    schedule: [Cron schedule]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.initContainers/
+    initContainers:
+      [initContainer name here]:
+        image: [image name here]
+        imagePullPolicy: [imagePullPolicy here]
+        command: [command here]
+        args: [args here]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.containers/
+    containers:
+      [container name here]:
+        image: [image name here]
+        imagePullPolicy: [imagePullPolicy here]
+        command: [command here]
+        args: [args here]
+
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#creating-a-deployment
+deployments:
+  [deployment name here]:
+    replicaCount: [replicas number here]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.nodeSelector/
+    nodeSelector:
+      [node selector key]: [node selector value]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.affinity.nodeAffinity/
+    affinity:
+      [affinity definition here]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.volumes.emptyDir/
+    volumes:
+      - [volume definition here]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.initContainers/
+    initContainers:
+      [initContainer name here]:
+        image: [image name here]
+        imagePullPolicy: [imagePullPolicy here]
+        command: [command here]
+        args: [args here]
+        extraVars:
+          [key name here]: [value here]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.containers/
+    containers:
+      [container name here]:
+        image: [image name here]
+        imagePullPolicy: [imagePullPolicy here]
+        command: [command here]
+        args: [args here]
+        extraVars:
+          [key name here]: [value here]
+
+# https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
+hpas:
+  [hpa name here]:
+    minReplicas: [minimum replica number]
+    maxReplicas: [maximum replica number]
+    targetCPUUtilizationPercentage:
+    # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-resource-metrics
+    metrics:
+    # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#scaling-policies
+    behavior:
+
+# https://kubernetes.io/fr/docs/concepts/services-networking/ingress/
+ingresses:
+  [ingress name here]:
+    # https://kubernetes.io/fr/docs/concepts/services-networking/ingress/#ingress-rules
+    rules:
+
+# https://kubernetes.io/docs/concepts/workloads/controllers/job/
+jobs:
+  [job name here]:
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.initContainers/
+    initContainers:
+      [initContainer name here]:
+        image: [image name here]
+        imagePullPolicy: [imagePullPolicy here]
+        command: [command here]
+        args: [args here]
+    # https://k8s-examples.container-solutions.com/examples/Pod/Pod.html#spec.containers/
+    containers:
+      [container name here]:
+        image: [image name here]
+        imagePullPolicy: [imagePullPolicy here]
+        command: [command here]
+        args: [args here]
+
+# https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#pod-disruption-budgets
+podDisruptionBudgets:
+  [podDisruptionBudget name here]:
+    # https://k8s-examples.container-solutions.com/examples/PodDisruptionBudget/PodDisruptionBudget.html#pod-disruption-budget-min-available.yaml
+    minAvailable:
+    # https://k8s-examples.container-solutions.com/examples/PodDisruptionBudget/PodDisruptionBudget.html#pod-disruption-budget-max-unavailable.yaml
+    maxUnavailable:
+
+scaledObjects:
+  [scaledObject name here]:
+    kind: [kind here] # Optional, defaults to Deployment
+    pollingInterval: [Interval here] # Optional, defaults to 30s
+    cooldownPeriod: [Period here] # Optional, defaults to 300s
+    idleReplicaCount: 0 # Optional, and only accepts '0', if omitted, will scale down to minReplicaCount
+    minReplicaCount: [Count here]
+    maxReplicaCount: [Count here]
+    fallback: # Optional, defines the behavior in case of failure to reach the metrics
+      failureThreshold: [Threshold here] # Not Optional if fallback is defined
+      replicas: [replicas here] # Not Optional if fallback is defined
+    restoreToOriginalReplicaCount: [Boolean here] # Optional, defaults to false, the behavior of the resource if this scaledObject is deleted
+    behavior: [usual HPA behavior here]
+    triggers: [array of Keda triggers here]
+
+scaledJobs:
+  [scaledJob name here]:
+    parallelism: [Number here]
+    completions: [Number here]
+    activeDeadlineSeconds: [Interval here]
+    backoffLimit: [Number here]
+    job: [Job template here]
+    pollingInterval: [Interval here] # Optional, defaults to 30s
+    successfulJobsHistoryLimit: [Number here]
+    failedJobsHistoryLimit: [Number here]
+    maxReplicaCount: [Count here]
+    rolloutStrategy: [default, gradual]
+    scalingStrategy: # defaults to default strategy
+    triggers: [array of Keda triggers here]

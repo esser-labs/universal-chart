@@ -1,0 +1,159 @@
+{{- if .Values.scaledJobs }}
+{{- $root := . }}
+{{- range $name, $scaledJobs := .Values.scaledJobs }}
+{{- if not $scaledJobs.disabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: {{ $name }}-scaled-job
+  labels:
+{{- if $scaledJobs.customLabels }}
+{{ toYaml $scaledJobs.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+{{- end }}
+{{- if $scaledJobs.extraLabels }}
+{{ toYaml $scaledJobs.extraLabels | indent 4 }}
+{{- end }}
+spec:
+  jobTargetRef:
+    parallelism:  {{ $scaledJobs.parallelism | default "1" }}
+    completions:  {{ $scaledJobs.completions | default "1" }}
+    activeDeadlineSeconds:  {{ $scaledJobs.activeDeadlineSeconds }}
+    backoffLimit:  {{ $scaledJobs.backoffLimit }}
+    template:
+      metadata:
+{{- if $scaledJobs.job.podAnnotations }}
+        annotations:
+{{ toYaml $scaledJobs.job.podAnnotations | indent 10 }}
+{{- end }}
+        labels:
+{{- if $scaledJobs.job.customLabels }}
+{{ toYaml $scaledJobs.job.customLabels | indent 10 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 10 }}
+          app: {{ $name }}
+{{- end }}
+{{- if $scaledJobs.extraLabels }}
+{{ toYaml $scaledJobs.extraLabels | indent 10 }}
+{{- end }}
+      spec:
+{{- if $scaledJobs.job.serviceAccountName }}
+        serviceAccountName: {{ $scaledJobs.job.serviceAccountName }}
+{{- end}}
+        restartPolicy: {{ $scaledJobs.job.restartPolicy | default "Never" }}
+{{- if $scaledJobs.job.initContainers }}
+        initContainers:
+{{- end }}
+{{- range $name, $init := $scaledJobs.job.initContainers }}
+        - name: "{{ if $init.name }}{{ $init.name }}{{ else }}{{ $name }}{{ end }}"
+          image: "{{ tpl $init.image $ }}"
+          imagePullPolicy: "{{ if $init.imagePullPolicy }}{{ $init.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $init.command }}
+          command:
+{{ tpl (toYaml $init.command) $ | indent 10 }}
+{{- end }}
+{{- if $init.args }}
+          args:
+{{ tpl (toYaml $init.args) $ | indent 10 }}
+{{- end }}
+{{- if $init.volumeMounts }}
+          volumeMounts:
+{{ toYaml $init.volumeMounts | indent 10 }}
+{{- end }}
+{{- if or $init.extraVars $init.secretKeyRef }}
+          env:
+{{- end }}
+{{- if $init.extraVars }}
+{{- range $key, $val := $init.extraVars }}
+          - name: {{ $key | quote }}
+            value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if $init.resources }}
+          resources:
+{{ toYaml $init.resources | indent 12 }}
+{{- end }}
+{{- end }}
+        containers:
+{{- range $name, $container := $scaledJobs.job.containers }}
+        - name: "{{ if $container.name }}{{ $container.name }}{{ else }}{{ $name }}{{ end }}"
+          image: "{{ tpl $container.image $ }}"
+          imagePullPolicy: "{{ if $container.imagePullPolicy }}{{ $container.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $container.command }}
+          command:
+{{ tpl (toYaml $container.command) $ | indent 10 }}
+{{- end }}
+{{- if $container.args }}
+          args:
+{{ tpl (toYaml $container.args) $ | indent 10 }}
+{{- end }}
+{{- if $container.volumeMounts }}
+          volumeMounts:
+{{ toYaml $container.volumeMounts | indent 10 }}
+{{- end }}
+{{- if $container.securityContext }}
+          securityContext:
+{{ toYaml $container.securityContext | indent 12 }}
+{{- end }}
+{{- if or $container.extraVars $container.secretKeyRef }}
+          env:
+{{- end }}
+{{- if $container.extraVars }}
+{{- range $key, $val := $container.extraVars }}
+          - name: {{ $key | quote }}
+            value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if $container.resources }}
+          resources:
+{{ toYaml $container.resources | indent 12 }}
+{{- end }}
+{{- end }}
+{{- if $scaledJobs.job.nodeSelector }}
+        nodeSelector:
+{{- range $key, $val := $scaledJobs.job.nodeSelector }}
+          {{ $key }}: {{ $val | quote }}
+{{- end }}
+{{- end }}
+{{- if $scaledJobs.job.affinity }}
+        affinity:
+{{ toYaml $scaledJobs.job.affinity | indent 10 }}
+{{- end }}
+{{- if $scaledJobs.job.tolerations }}
+        tolerations:
+{{ toYaml $scaledJobs.job.tolerations | indent 10 }}
+{{- end }}
+{{- if $scaledJobs.job.volumes }}
+        volumes:
+{{ toYaml $scaledJobs.job.volumes | indent 8 }}
+{{- end }}
+{{- if $scaledJobs.pollingInterval }}
+  pollingInterval: {{ $scaledJobs.pollingInterval }}
+{{- end }}
+{{- if $scaledJobs.successfulJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ $scaledJobs.successfulJobsHistoryLimit }}
+{{- end }}
+{{- if $scaledJobs.failedJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ $scaledJobs.failedJobsHistoryLimit }}
+{{- end }}
+{{- if $scaledJobs.maxReplicaCount }}
+  minReplicaCount: {{ $scaledJobs.minReplicaCount }}
+{{- end }}
+{{- if $scaledJobs.maxReplicaCount }}
+  maxReplicaCount: {{ $scaledJobs.maxReplicaCount }}
+{{- end }}
+{{- if $scaledJobs.rolloutStrategy }}
+  rollout:
+    strategy: {{ $scaledJobs.rolloutStrategy }}
+{{- end }}
+{{- if $scaledJobs.scalingStrategy }}
+  scalingStrategy:
+{{ toYaml $scaledJobs.scalingStrategy | indent 4 }}
+{{- end }}
+  triggers:
+{{ toYaml $scaledJobs.triggers | indent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}

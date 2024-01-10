@@ -1,0 +1,47 @@
+{{- if .Values.ingresses }}
+{{- $root := . }}
+{{- range $name, $ingress := .Values.ingresses }}
+{{- if not $ingress.disabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+{{- if $ingress.annotations }}
+  annotations:
+{{ tpl (toYaml $ingress.annotations) $ | indent 4 }}
+{{- end }}
+  labels:
+{{- if $ingress.customLabels }}
+{{ toYaml $ingress.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+{{- end }}
+{{- if $ingress.app }}
+    app: "{{ $ingress.app }}"
+{{- else }}
+    app: {{ $name }}
+{{- end }}
+spec:
+{{- if $ingress.ingressClassName }}
+  ingressClassName: {{ $ingress.ingressClassName }}
+{{- end }}
+{{- with $ingress.defaultBackend }} # this is supported in 1.19 and newer
+  defaultBackend:
+{{ toYaml $ingress.defaultBackend | indent 4 }}
+{{- end }}
+{{- if $ingress.tls }}
+  tls:
+  {{- range $ingress.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ tpl . $ | quote }}
+      {{- end }}
+      secretName: {{ tpl .secretName $ }}
+  {{- end }}
+{{- end }}
+  rules:
+{{ tpl (toYaml $ingress.rules) $ | indent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}

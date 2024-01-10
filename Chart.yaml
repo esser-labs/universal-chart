@@ -1,0 +1,5 @@
+apiVersion: v2
+appVersion: "2.0"
+description: A universal Helm chart.
+name: universal-chart
+version: 0.1.0

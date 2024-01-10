@@ -1,0 +1,32 @@
+{{- if .Values.pvcs }}
+{{- $root := . }}
+{{- range $name, $pvc := .Values.pvcs }}
+{{- if not $pvc.disabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}
+  labels:
+{{- if $pvc.customLabels }}
+{{ toYaml $pvc.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+{{- end }}
+  annotations:
+{{- if $pvc.annotations }}
+{{ toYaml $pvc.annotations | indent 4 }}
+{{- end }}
+spec:
+  accessModes: {{ $pvc.accessMode }}
+{{- if $pvc.storageSize }}
+  resources:
+    requests:
+      storage:  {{ $pvc.storageSize }}
+{{- end }}
+{{- if $pvc.storageClass }}
+  storageClassName: {{ $pvc.storageClass }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

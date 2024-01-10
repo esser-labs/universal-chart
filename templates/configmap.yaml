@@ -1,0 +1,27 @@
+{{- if .Values.configmaps }}
+{{- $root := . }}
+{{- range $name, $configmap := .Values.configmaps }}
+{{- if not $configmap.disabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels:
+{{- if $configmap.customLabels }}
+{{ toYaml $configmap.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+{{- end }}
+data:
+{{- if $configmap.toJson }}
+{{- range $name, $data := $configmap.data }}
+  {{ $name }}: |
+{{ tpl (toPrettyJson $data) $root | indent 4 }}
+{{- end }}
+{{- else }}
+{{ tpl (toYaml $configmap.data) $root | indent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

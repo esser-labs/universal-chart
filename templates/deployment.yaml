@@ -1,0 +1,250 @@
+{{- if .Values.deployments }}
+{{- $root := . }}
+{{- range $deploymentName, $deployment := .Values.deployments }}
+{{- if not $deployment.disabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $deploymentName }}
+{{- if $deployment.annotations }}
+  annotations:
+{{ toYaml $deployment.annotations | indent 4 }}
+{{- end }}
+  labels:
+{{- if $deployment.customLabels }}
+{{ toYaml $deployment.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+    app: {{ $deploymentName }}
+{{- end }}
+{{- if $deployment.extraLabels }}
+{{ toYaml $deployment.extraLabels | indent 4 }}
+{{- end }}
+spec:
+  replicas: {{ $deployment.replicaCount }}
+  selector:
+    matchLabels:
+{{- if $deployment.customSelectors }}
+{{ toYaml $deployment.customSelectors | indent 6 }}
+{{- else }}
+      app: {{ $deploymentName }}
+{{- end }}
+{{- if $deployment.strategy }}
+  strategy:
+{{ toYaml $deployment.strategy | indent 4 }}
+{{- end }}
+  template:
+    metadata:
+{{- if $deployment.podAnnotations }}
+      annotations:
+{{ tpl (toYaml $deployment.podAnnotations) $root | indent 8 }}
+{{- end }}
+      labels:
+{{- if $deployment.customLabels }}
+{{ toYaml $deployment.customLabels | indent 8 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 8 }}
+        app: {{ $deploymentName }}
+{{- end }}
+{{- if $deployment.extraLabels }}
+{{ toYaml $deployment.extraLabels | indent 8 }}
+{{- end }}
+    spec:
+{{- if $deployment.serviceAccountName }}
+      serviceAccountName: {{ $deployment.serviceAccountName }}
+{{- end }}
+{{- if $deployment.dnsPolicy }}
+      dnsPolicy: {{ $deployment.dnsPolicy }}
+{{- end }}
+{{- if $deployment.dnsConfig }}
+      dnsConfig:
+{{ toYaml $deployment.dnsConfig | indent 8 }}
+{{- end }}
+{{- if $deployment.restartPolicy }}
+      restartPolicy: {{ $deployment.restartPolicy }}
+{{- end }}
+{{- if $deployment.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ $deployment.terminationGracePeriodSeconds }}
+{{- end }}
+{{- if $deployment.nodeSelector }}
+      nodeSelector:
+{{- range $key, $val := $deployment.nodeSelector }}
+        {{ $key }}: {{ $val | quote }}
+{{- end }}
+{{- end }}
+{{- if $deployment.volumes }}
+      volumes:
+{{ tpl ( toYaml $deployment.volumes ) $root | indent 6 }}
+{{- end }}
+{{- if $deployment.initContainers }}
+      initContainers:
+{{- end }}
+{{- range $initName, $init := $deployment.initContainers }}
+      - name: "{{ if $init.name }}{{ $init.name }}{{ else }}{{ $initName }}{{ end }}"
+        image: "{{ tpl $init.image $ }}"
+        imagePullPolicy: "{{ if $init.imagePullPolicy }}{{ $init.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $init.command }}
+        command:
+{{ tpl (toYaml $init.command) $ | indent 8 }}
+{{- end }}
+{{- if $init.args }}
+        args:
+{{ tpl (toYaml $init.args) $ | indent 8 }}
+{{- end }}
+{{- if $init.volumeMounts }}
+        volumeMounts:
+{{ tpl ( toYaml $init.volumeMounts ) $root | indent 8 }}
+{{- end }}
+{{- if $init.securityContext }}
+        securityContext:
+{{ toYaml $init.securityContext | indent 10 }}
+{{- end }}
+        env:
+{{- if $init.extraVars }}
+{{- range $key, $val := $init.extraVars }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if and $root.Values.localConfigs }}
+{{- range $key, $config := $root.Values.localConfigs.deployments }}
+{{- if eq $key $deploymentName }}
+{{- range $key, $initConfig := $config.initContainers }}
+{{- if eq $key $initName }}
+{{- range $key, $value := $initConfig }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $value $ | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if $init.secretKeyRef }}
+{{ toYaml $init.secretKeyRef | indent 8 }}
+{{- end }}
+{{- if $init.resources }}
+        resources:
+{{ toYaml $init.resources | indent 10 }}
+{{- end }}
+{{- end }}
+      containers:
+{{- range $containerName, $container := $deployment.containers }}
+      - name: "{{ if $container.name }}{{ $container.name }}{{ else }}{{ $containerName }}{{ end }}"
+        image: "{{ tpl $container.image $ }}"
+        imagePullPolicy: "{{ if $container.imagePullPolicy }}{{ $container.imagePullPolicy }}{{ else }}Always{{ end }}"
+{{- if $container.command }}
+        command:
+{{ tpl (toYaml $container.command) $ | indent 8 }}
+{{- end }}
+{{- if $container.args }}
+        args:
+{{ tpl (toYaml $container.args) $ | indent 8 }}
+{{- end }}
+{{- if $container.containerPorts }}
+        ports:
+{{ toYaml $container.containerPorts | indent 8 }}
+{{- end }}
+{{- if $container.volumeMounts }}
+        volumeMounts:
+{{ tpl ( toYaml $container.volumeMounts ) $root | indent 8 }}
+{{- end }}
+{{- if $container.securityContext }}
+        securityContext:
+{{ toYaml $container.securityContext | indent 10 }}
+{{- end }}
+{{- if $container.image }}
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+{{- end }}
+{{- if and $root.Values.localConfigs }}
+{{- range $key, $config := $root.Values.localConfigs.deployments }}
+{{- if eq $key $deploymentName }}
+{{- range $key, $containerConfig := $config.containers }}
+{{- if eq $key $containerName }}
+{{- range $key, $value := $containerConfig }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $value $ | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- range $key, $val := $root.Values.defaultConfigs }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- if and ( $root.Values.extraVarsFile ) ( $container.extraVarsFile ) }}
+{{- range $key, $val := fromYaml ( $root.Values.extraVarsFile ) }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if and ( $root.Values.extraRemoteVarsFile ) ( $container.extraRemoteVarsFile ) }}
+{{- range $key, $val := fromYaml ( $root.Values.extraRemoteVarsFile ) }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if $container.extraVars }}
+{{- range $key, $val := $container.extraVars }}
+        - name: {{ $key | quote }}
+          value: {{ tpl $val $ | quote }}
+{{- end }}
+{{- end }}
+{{- if $container.secretKeyRef }}
+{{ toYaml $container.secretKeyRef | indent 8 }}
+{{- end }}
+{{- if $container.lifecycle }}
+        lifecycle:
+{{ toYaml $container.lifecycle | indent 10 }}
+{{- end }}
+{{- if $container.livenessProbe }}
+        livenessProbe:
+{{ toYaml $container.livenessProbe | indent 10 }}
+{{- end }}
+{{- if $container.readinessProbe }}
+        readinessProbe:
+{{ toYaml $container.readinessProbe | indent 10 }}
+{{- end }}
+{{- if $container.startupProbe }}
+        startupProbe:
+{{ toYaml $container.startupProbe | indent 10 }}
+{{- end }}
+{{- if $container.resources }}
+        resources:
+{{ toYaml $container.resources | indent 10 }}
+{{- end }}
+{{- end }}
+{{- if $deployment.affinity }}
+      affinity:
+{{ toYaml $deployment.affinity | indent 8 }}
+{{- end }}
+{{- if $deployment.tolerations }}
+      tolerations:
+{{ toYaml $deployment.tolerations | indent 8 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

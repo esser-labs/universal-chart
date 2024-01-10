@@ -1,0 +1,59 @@
+{{- if .Values.scaledObjects }}
+{{- $root := . }}
+{{- range $name, $scaledObject := .Values.scaledObjects }}
+{{- if not $scaledObject.disabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $name }}-scaled-object
+  labels:
+{{- if $scaledObject.customLabels }}
+{{ toYaml $scaledObject.customLabels | indent 4 }}
+{{- else }}
+{{ include "universal-chart.labels" $root | indent 4 }}
+{{- end }}
+{{- if $scaledObject.extraLabels }}
+{{ toYaml $scaledObject.extraLabels | indent 4 }}
+{{- end }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+{{- if $scaledObject.kind }}
+    kind: {{ $scaledObject.kind }}
+{{- else }}
+    kind: Deployment
+{{- end }}
+    name: {{ $name }}
+{{- if $scaledObject.pollingInterval }}
+  pollingInterval:  {{ $scaledObject.pollingInterval }}
+{{- end }}
+{{- if $scaledObject.cooldownPeriod }}
+  cooldownPeriod:  {{ $scaledObject.cooldownPeriod }}
+{{- end }}
+{{- if $scaledObject.idleReplicaCount | quote }}
+  idleReplicaCount:  {{ $scaledObject.idleReplicaCount }}
+{{- end }}
+  minReplicaCount: {{ $scaledObject.minReplicaCount }}
+  maxReplicaCount: {{ $scaledObject.maxReplicaCount }}
+{{- if $scaledObject.fallback }}
+  fallback:
+{{ toYaml $scaledObject.fallback | indent 4 }}
+{{- end }}
+  advanced:
+{{- if $scaledObject.restoreToOriginalReplicaCount }}
+    restoreToOriginalReplicaCount:  {{ $scaledObject.restoreToOriginalReplicaCount }}
+{{- end }}
+    horizontalPodAutoscalerConfig:
+{{- if $scaledObject.hpaName }}
+      name: {{ $scaledObject.hpaName }}
+{{- end }}
+{{- if $scaledObject.behavior }}
+      behavior:
+{{ toYaml $scaledObject.behavior | indent 8 }}
+{{- end }}
+  triggers:
+{{ tpl (toYaml $scaledObject.triggers) $root | indent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}

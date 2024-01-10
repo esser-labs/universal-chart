@@ -1,0 +1,41 @@
+{{- if .Values.podDisruptionBudgets }}
+{{- $root := . }}
+{{- range $name, $pdb := .Values.podDisruptionBudgets }}
+{{- if not $pdb.disabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+    {{- if or $pdb.annotations $root.Values.annotations }}
+  annotations:
+      {{ with $pdb.annotations }}
+{{ toYaml . | indent 4 }}
+      {{- end }}
+      {{ with $root.Values.annotations }}
+{{ toYaml . | indent 4 }}
+      {{- end }}
+    {{- end }}
+  labels:
+{{ include "universal-chart.labels" $root | indent 4 }}
+    {{- if $pdb.app }}
+    app: "{{ $pdb.app }}"
+    {{- else }}
+    app: {{ $name }}
+    {{- end }}
+spec:
+    {{- if $pdb.minAvailable }}
+  minAvailable: {{ $pdb.minAvailable }}
+    {{- else if $pdb.maxUnavailable }}
+  maxUnavailable: {{ $pdb.maxUnavailable }}
+    {{- end }}
+  selector:
+    matchLabels:
+    {{- if $pdb.app }}
+      app: "{{ $pdb.app }}"
+    {{- else }}
+      app: {{ $name }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
